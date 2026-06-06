@@ -1,15 +1,7 @@
 import streamlit as st
 
-from src.styles import apply_styles
 from src.data_loader import load_data
 from src.filters import apply_sidebar_filters
-from src.components import kpi_card
-from src.pages import (
-    show_overview_page,
-    show_competitions_page,
-    show_players_page,
-    show_goalkeepers_page,
-)
 
 # Page settings.
 st.set_page_config(
@@ -18,8 +10,34 @@ st.set_page_config(
     layout="wide"
 )
 
-# Load custom design.
-apply_styles()
+# Theme selector: the whole dashboard now runs from this one app.py file.
+theme = st.sidebar.radio(
+    "Dashboard theme",
+    ["Dark Mode", "Light Mode"],
+    horizontal=True,
+)
+
+if theme == "Light Mode":
+    from src.light_styles import apply_light_styles as apply_dashboard_styles
+    from src.light_components import kpi_card
+    from src.light_pages import (
+        show_overview_page,
+        show_competitions_page,
+        show_players_page,
+        show_goalkeepers_page,
+    )
+else:
+    from src.styles import apply_styles as apply_dashboard_styles
+    from src.components import kpi_card
+    from src.pages import (
+        show_overview_page,
+        show_competitions_page,
+        show_players_page,
+        show_goalkeepers_page,
+    )
+
+# Load the selected design.
+apply_dashboard_styles()
 
 # Load player data.
 players_df = load_data()
@@ -39,8 +57,8 @@ st.markdown(
         <div class="dashboard-badge">⚽ Football Analytics Dashboard</div>
         <div class="dashboard-title">European Football <span>Player Insights</span></div>
         <div class="dashboard-subtitle">
-            Explore players, competitions, positions, cards, assists, goals and goalkeeper performance 
-            in the top five European competitions.
+            Take a look at the top five European Leagues and see how players perform in terms of positions,
+            cards, assists, goals and goalkeeper performance.
         </div>
     </div>
     """,

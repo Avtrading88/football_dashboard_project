@@ -1,9 +1,9 @@
 import streamlit as st
 import plotly.graph_objects as go
 
-from src.components import centered_dataframe
-from src.charts import make_horizontal_bar, chart_layout
-from src.config import APP_BG, TEXT_LIGHT, GRID_COLOR, TEAL, BLUE, NEON, YELLOW, RED
+from src.light_components import centered_dataframe
+from src.light_charts import make_horizontal_bar, chart_layout
+from src.light_config import APP_BG, TEXT_LIGHT, GRID_COLOR, TEAL, BLUE, NEON, YELLOW, RED
 
 
 def show_overview_page(filtered_df):
@@ -121,10 +121,10 @@ def show_overview_page(filtered_df):
                     "borderwidth": 1,
                     "bordercolor": GRID_COLOR,
                     "steps": [
-                        {"range": [0, gauge_max * 0.25], "color": "#102A43"},
-                        {"range": [gauge_max * 0.25, gauge_max * 0.50], "color": "#14532D"},
-                        {"range": [gauge_max * 0.50, gauge_max * 0.75], "color": "#6B8E23"},
-                        {"range": [gauge_max * 0.75, gauge_max], "color": "#9ACD32"},
+                        {"range": [0, gauge_max * 0.25], "color": "#DBEAFE"},
+                        {"range": [gauge_max * 0.25, gauge_max * 0.50], "color": "#CCFBF1"},
+                        {"range": [gauge_max * 0.50, gauge_max * 0.75], "color": "#DCFCE7"},
+                        {"range": [gauge_max * 0.75, gauge_max], "color": "#BBF7D0"},
                     ],
                 },
             )
