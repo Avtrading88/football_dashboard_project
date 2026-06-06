@@ -1,0 +1,10 @@
+.venv/
+venv/
+__pycache__/
+*.pyc
+.DS_Store
+.ipynb_checkpoints/
+.streamlit/secrets.toml
+
+Top Goal Scorer Champions League 2025-2026.csv
+Europa League Season 2026 - 2026.csv
