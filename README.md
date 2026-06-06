@@ -4,6 +4,7 @@ A dark, modern Streamlit dashboard for exploring European football player statis
 
 The dashboard includes filters, KPI cards, player tables, league comparisons, goal and assist charts, card statistics, and goalkeeper analysis.
 
+
 ## Project Structure
 
 ```text
@@ -26,6 +27,17 @@ football_dashboard_project/
     ├── filters.py
     └── pages.py
 ```
+
+## Data Source
+
+The dataset used in this project comes from Kaggle:
+
+**Football Players Stats (2025–2026)**  
+Link: https://www.kaggle.com/datasets/hubertsidorowicz/football-players-stats-2025-2026
+
+The dataset contains football player statistics for the 2025–2026 season from the top five European leagues. According to the Kaggle dataset description, the original statistics are sourced from FBref.
+
+This project uses the dataset for educational and portfolio purposes.
 
 ## What Each File Does
 
