@@ -25,6 +25,13 @@ if theme == "Light Mode":
         show_competitions_page,
         show_players_page,
         show_goalkeepers_page,
+        show_similarity_page,
+        show_clustering_page,
+        show_radar_page,
+        show_scouting_page,
+        show_league_analysis_page,
+        show_pca_page,
+        show_predictions_page,
     )
 else:
     from src.styles import apply_styles as apply_dashboard_styles
@@ -34,6 +41,13 @@ else:
         show_competitions_page,
         show_players_page,
         show_goalkeepers_page,
+        show_similarity_page,
+        show_clustering_page,
+        show_radar_page,
+        show_scouting_page,
+        show_league_analysis_page,
+        show_pca_page,
+        show_predictions_page,
     )
 
 # Load the selected design.
@@ -85,11 +99,22 @@ with k4:
 # Top navigation.
 page = st.radio(
     "Navigation",
-    ["Overview", "Competitions", "Players", "Goalkeepers"],
+    [
+        "Overview",
+        "Competitions",
+        "Players",
+        "Goalkeepers",
+        "Player Similarity",
+        "Player Clustering",
+        "Player Radar",
+        "Scouting",
+        "League Analysis",
+        "Player Profile Map",
+        "Predictions & Metrics"
+    ],
     horizontal=True,
     label_visibility="collapsed",
 )
-
 # Show selected page.
 if page == "Overview":
     show_overview_page(filtered_df)
@@ -99,3 +124,17 @@ elif page == "Players":
     show_players_page(filtered_df)
 elif page == "Goalkeepers":
     show_goalkeepers_page(filtered_df)
+elif page == "Player Similarity":
+    show_similarity_page(filtered_df)
+elif page == "Player Clustering":
+    show_clustering_page(filtered_df)
+elif page == "Player Radar":
+    show_radar_page(filtered_df)
+elif page == "Scouting":
+    show_scouting_page(filtered_df)
+elif page == "League Analysis":
+    show_league_analysis_page(filtered_df)
+elif page == "Player Profile Map":
+    show_pca_page(filtered_df)
+elif page == "Predictions & Metrics":
+    show_predictions_page(filtered_df)

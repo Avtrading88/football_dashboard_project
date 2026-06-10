@@ -39,7 +39,7 @@ def apply_styles():
     section[data-testid="stSidebar"] h3,
     section[data-testid="stSidebar"] label,
     section[data-testid="stSidebar"] p {{
-        color: #E5F2FF !important;
+        color: #EAF2FF !important;
     }}
 
     .sidebar-hero {{
@@ -76,7 +76,7 @@ def apply_styles():
     }}
 
     .sidebar-hero-subtitle {{
-        color: #AAB8C9;
+        color: #BFD4EA;
         font-size: 12px;
         line-height: 1.4;
     }}
@@ -111,8 +111,8 @@ def apply_styles():
 
     section[data-testid="stSidebar"] label {{
         font-size: 13px !important;
-        font-weight: 700 !important;
-        color: #AAB8C9 !important;
+        font-weight: 800 !important;
+        color: #EAF2FF !important;
         margin-bottom: 6px !important;
     }}
 
@@ -129,9 +129,10 @@ def apply_styles():
         box-shadow: 0 0 0 3px rgba(183,255,60,0.10);
     }}
 
-    section[data-testid="stSidebar"] div[data-baseweb="select"] span {{
+    section[data-testid="stSidebar"] div[data-baseweb="select"] span,
+    section[data-testid="stSidebar"] div[data-baseweb="select"] div {{
         color: #EAF2FF !important;
-        font-weight: 700 !important;
+        font-weight: 800 !important;
     }}
 
     section[data-testid="stSidebar"] div[data-baseweb="select"] svg {{
@@ -145,12 +146,13 @@ def apply_styles():
         box-shadow: none !important;
         outline: none !important;
         color: #EAF2FF !important;
-        font-weight: 700 !important;
+        font-weight: 800 !important;
     }}
 
     section[data-testid="stSidebar"] div[data-baseweb="select"] input::placeholder {{
-        color: #EAF2FF !important;
+        color: #BFD4EA !important;
         opacity: 1 !important;
+        font-weight: 700 !important;
     }}
 
     section[data-testid="stSidebar"] [data-baseweb="tag"] {{
@@ -178,18 +180,19 @@ def apply_styles():
         border: 1px solid rgba(56, 189, 248, 0.18) !important;
         border-radius: 14px !important;
         min-height: 44px !important;
-        font-weight: 700 !important;
+        font-weight: 800 !important;
         box-shadow: 0 8px 20px rgba(0,0,0,0.16) !important;
         padding-left: 12px !important;
     }}
 
     section[data-testid="stSidebar"] div[data-testid="stTextInput"] input::placeholder {{
-        color: #7C8CA3 !important;
+        color: #BFD4EA !important;
+        opacity: 1 !important;
     }}
 
     section[data-testid="stSidebar"] div[data-testid="stSlider"] span {{
-        color: #D4E2F5 !important;
-        font-weight: 700 !important;
+        color: #EAF2FF !important;
+        font-weight: 800 !important;
     }}
 
     section[data-testid="stSidebar"] div[data-testid="stSlider"] div[role="slider"] {{
@@ -240,7 +243,7 @@ def apply_styles():
 
     .dashboard-subtitle {{
         font-size: 1rem;
-        color: {TEXT_MUTED};
+        color: #BFD4EA;
         margin: 0;
         text-align: center;
     }}
@@ -258,7 +261,7 @@ def apply_styles():
 
     .kpi-label {{
         font-size: 13px;
-        color: #8FA2B8;
+        color: #BFD4EA;
         margin-bottom: 10px;
         font-weight: 800;
     }}
@@ -318,6 +321,49 @@ def apply_styles():
         border-color: {NEON};
         box-shadow: 0 0 16px rgba(183,255,60,0.12);
         transform: translateY(-1px);
+    }}
+
+    div[role="radiogroup"] label * {{
+        color: #F8FAFC !important;
+        font-weight: 800 !important;
+    }}
+
+    /* =========================
+       Main page readability fixes
+       ========================= */
+
+    div[data-testid="stSelectbox"] label,
+    div[data-testid="stSlider"] label,
+    div[data-testid="stCheckbox"] label,
+    div[data-testid="stMultiSelect"] label,
+    div[data-testid="stTextInput"] label {{
+        color: #EAF2FF !important;
+        font-weight: 800 !important;
+    }}
+
+    div[data-testid="stMarkdownContainer"] p {{
+        color: #D4E2F5 !important;
+        font-weight: 600 !important;
+    }}
+
+    div[data-testid="stCheckbox"] p {{
+        color: #D4E2F5 !important;
+        font-weight: 700 !important;
+    }}
+
+    div[data-testid="stSlider"] span {{
+        color: #EAF2FF !important;
+        font-weight: 800 !important;
+    }}
+
+    div[data-testid="stSelectbox"] div[data-baseweb="select"] span {{
+        color: #071426 !important;
+        font-weight: 800 !important;
+    }}
+
+    .stMarkdown,
+    .stText {{
+        color: #D4E2F5 !important;
     }}
 </style>
 """,
