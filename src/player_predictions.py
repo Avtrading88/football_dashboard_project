@@ -4,14 +4,20 @@ from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.metrics import (
     accuracy_score,
+    balanced_accuracy_score,
     f1_score,
     mean_absolute_error,
     mean_squared_error,
+    precision_score,
+    recall_score,
     r2_score,
+    roc_auc_score,
 )
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder
+
+from src.feature_engineering import prepare_analytics_frame
 
 
 def prepare_prediction_data(df):
@@ -19,12 +25,16 @@ def prepare_prediction_data(df):
     Prepare data for prediction models and advanced football metrics.
     """
 
-    model_df = df.copy()
+    model_df = prepare_analytics_frame(df)
 
     useful_columns = [
         "Player Name",
+        "Player ID",
+        "Player Record ID",
+        "Player Selection Label",
         "Nationality",
         "Position",
+        "Primary Position",
         "Club",
         "League",
         "Age",
@@ -41,8 +51,27 @@ def prepare_prediction_data(df):
         "Progressive Carries",
         "Progressive Passes",
         "Progressive Passes Received",
+        "Shots",
+        "Shots on Target",
+        "Shots per 90",
+        "Shots on Target per 90",
+        "Shot Accuracy Percentage",
+        "Goal Conversion Percentage",
+        "Crosses",
+        "Crosses per 90",
+        "Tackles Won",
+        "Interceptions",
+        "Defensive Actions per 90",
+        "Fouled per 90",
+        "Fouls Committed per 90",
+        "Save Percentage",
+        "Clean Sheet Percentage",
+        "Penalty Save Percentage",
+        "Goals Against per 90",
         "Yellow Cards",
         "Red Cards",
+        "Discipline Risk",
+        "Discipline Risk per 90",
     ]
 
     existing_columns = [
@@ -54,8 +83,12 @@ def prepare_prediction_data(df):
 
     text_columns = [
         "Player Name",
+        "Player ID",
+        "Player Record ID",
+        "Player Selection Label",
         "Nationality",
         "Position",
+        "Primary Position",
         "Club",
         "League",
     ]
@@ -190,6 +223,18 @@ def get_model_feature_columns(model_df, target_type="goals"):
         "Progressive Carries",
         "Progressive Passes",
         "Progressive Passes Received",
+        "Shots",
+        "Shots on Target",
+        "Shots per 90",
+        "Shots on Target per 90",
+        "Shot Accuracy Percentage",
+        "Crosses",
+        "Crosses per 90",
+        "Tackles Won",
+        "Interceptions",
+        "Defensive Actions per 90",
+        "Fouled per 90",
+        "Fouls Committed per 90",
         "Yellow Cards",
         "Red Cards",
     ]
@@ -209,6 +254,18 @@ def get_model_feature_columns(model_df, target_type="goals"):
             "Progressive Carries",
             "Progressive Passes",
             "Progressive Passes Received",
+            "Shots",
+            "Shots on Target",
+            "Shots per 90",
+            "Shots on Target per 90",
+            "Shot Accuracy Percentage",
+            "Crosses",
+            "Crosses per 90",
+            "Tackles Won",
+            "Interceptions",
+            "Defensive Actions per 90",
+            "Fouled per 90",
+            "Fouls Committed per 90",
             "Yellow Cards",
             "Red Cards",
         ]
@@ -313,11 +370,16 @@ def train_goals_prediction_model(df, min_minutes=500):
     model.fit(X_train, y_train)
 
     predictions = model.predict(X_test)
+    baseline_predictions = [float(y_train.mean())] * len(y_test)
 
     metrics = {
         "MAE": round(mean_absolute_error(y_test, predictions), 2),
         "RMSE": round(mean_squared_error(y_test, predictions) ** 0.5, 2),
         "R2 Score": round(r2_score(y_test, predictions), 3),
+        "Baseline MAE": round(
+            mean_absolute_error(y_test, baseline_predictions),
+            2,
+        ),
         "Training Rows": len(X_train),
         "Test Rows": len(X_test),
     }
@@ -416,10 +478,20 @@ def train_top_performer_classifier(
 
     predictions = model.predict(X_test)
     probabilities = model.predict_proba(X_test)[:, 1]
+    majority_class = int(y_train.mode().iloc[0])
+    baseline_predictions = [majority_class] * len(y_test)
 
     metrics = {
         "Accuracy": round(accuracy_score(y_test, predictions), 3),
+        "Balanced Accuracy": round(balanced_accuracy_score(y_test, predictions), 3),
+        "Precision": round(precision_score(y_test, predictions, zero_division=0), 3),
+        "Recall": round(recall_score(y_test, predictions, zero_division=0), 3),
         "F1 Score": round(f1_score(y_test, predictions), 3),
+        "ROC AUC": round(roc_auc_score(y_test, probabilities), 3),
+        "Baseline Accuracy": round(
+            accuracy_score(y_test, baseline_predictions),
+            3,
+        ),
         "Top Performer Threshold": round(threshold, 3),
         "Training Rows": len(X_train),
         "Test Rows": len(X_test),

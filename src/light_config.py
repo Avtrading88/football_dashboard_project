@@ -1,5 +1,9 @@
-# CSV file path.
-DATA_PATH = "data/players_data_light-2025_2026.csv"
+from pathlib import Path
+
+
+# Resolve the dataset independently of the directory used to start Streamlit.
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+DATA_PATH = PROJECT_ROOT / "data" / "players_data_light-2025_2026.csv"
 
 # Light mode colors.
 APP_BG = "#F6F8FC"

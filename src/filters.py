@@ -43,14 +43,21 @@ def apply_sidebar_filters(players_df):
         filtered_df = filtered_df[filtered_df["Club"].isin(selected_clubs)]
 
     with st.sidebar.expander("📍 Position Filter", expanded=True):
-        position_options = sorted(filtered_df["Position"].dropna().unique())
+        position_column = (
+            "Primary Position"
+            if "Primary Position" in filtered_df.columns
+            else "Position"
+        )
+        position_options = sorted(filtered_df[position_column].dropna().unique())
         selected_positions = st.multiselect(
-            "Choose position(s)",
+            "Choose primary position(s)",
             options=position_options,
             placeholder="All positions"
         )
     if selected_positions:
-        filtered_df = filtered_df[filtered_df["Position"].isin(selected_positions)]
+        filtered_df = filtered_df[
+            filtered_df[position_column].isin(selected_positions)
+        ]
 
     with st.sidebar.expander("🌍 Nationality Filter", expanded=False):
         nationality_options = sorted(filtered_df["Nationality"].dropna().unique())
@@ -75,6 +82,19 @@ def apply_sidebar_filters(players_df):
             ]
 
     with st.sidebar.expander("📊 Performance Filter", expanded=True):
+        if "Minutes Played" in filtered_df.columns:
+            max_minutes = int(players_df["Minutes Played"].max())
+            min_minutes = st.slider(
+                "Minimum minutes played",
+                0,
+                max_minutes,
+                0,
+                step=100,
+            )
+            filtered_df = filtered_df[
+                filtered_df["Minutes Played"] >= min_minutes
+            ]
+
         if "Matches Played" in filtered_df.columns:
             max_matches = int(players_df["Matches Played"].max())
             min_matches = st.slider("Minimum matches played", 0, max_matches, 0)

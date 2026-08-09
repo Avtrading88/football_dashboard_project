@@ -1,6 +1,42 @@
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 
+from src.feature_engineering import prepare_analytics_frame
+
+
+ROLE_SCORE_PROFILES = {
+    "FW": [
+        ("Non-Penalty Goals per 90", 28, False),
+        ("Assists per 90", 16, False),
+        ("Shots on Target per 90", 20, False),
+        ("Shot Accuracy Percentage", 12, False),
+        ("Goal Conversion Percentage", 14, False),
+        ("Fouled per 90", 10, False),
+    ],
+    "MF": [
+        ("Goals + Assists per 90", 22, False),
+        ("Assists per 90", 14, False),
+        ("Crosses per 90", 18, False),
+        ("Defensive Actions per 90", 24, False),
+        ("Fouled per 90", 12, False),
+        ("Shot Accuracy Percentage", 10, False),
+    ],
+    "DF": [
+        ("Defensive Actions per 90", 40, False),
+        ("Tackles Won per 90", 15, False),
+        ("Interceptions per 90", 15, False),
+        ("Fouls Committed per 90", 10, True),
+        ("Yellow Cards per 90", 10, True),
+        ("Crosses per 90", 10, False),
+    ],
+    "GK": [
+        ("Save Percentage", 45, False),
+        ("Clean Sheet Percentage", 25, False),
+        ("Goals Against per 90", 20, True),
+        ("Penalty Save Percentage", 10, False),
+    ],
+}
+
 
 def prepare_scouting_data(df):
     """
@@ -8,54 +44,7 @@ def prepare_scouting_data(df):
     Adds per-90 metrics and normalized score columns.
     """
 
-    scouting_df = df.copy()
-
-    useful_columns = [
-        "Player Name",
-        "Nationality",
-        "Position",
-        "Club",
-        "League",
-        "Age",
-        "Minutes Played",
-        "Matches Played",
-        "Goals",
-        "Assists",
-        "Goals + Assists",
-        "Expected Goals",
-        "Expected Assisted Goals",
-        "Progressive Carries",
-        "Progressive Passes",
-        "Progressive Passes Received",
-        "Yellow Cards",
-        "Red Cards",
-    ]
-
-    existing_columns = [
-        col for col in useful_columns
-        if col in scouting_df.columns
-    ]
-
-    scouting_df = scouting_df[existing_columns].copy()
-
-    text_columns = [
-        "Player Name",
-        "Nationality",
-        "Position",
-        "Club",
-        "League",
-    ]
-
-    numeric_columns = [
-        col for col in scouting_df.columns
-        if col not in text_columns
-    ]
-
-    for col in numeric_columns:
-        scouting_df[col] = pd.to_numeric(
-            scouting_df[col],
-            errors="coerce"
-        )
+    scouting_df = prepare_analytics_frame(df)
 
     if "Minutes Played" not in scouting_df.columns:
         return scouting_df
@@ -67,69 +56,6 @@ def prepare_scouting_data(df):
     scouting_df = scouting_df[
         scouting_df["Minutes Played"] > 0
     ].copy()
-
-    if "Goals" in scouting_df.columns:
-        scouting_df["Goals per 90"] = (
-            scouting_df["Goals"] / scouting_df["Minutes Played"] * 90
-        )
-
-    if "Assists" in scouting_df.columns:
-        scouting_df["Assists per 90"] = (
-            scouting_df["Assists"] / scouting_df["Minutes Played"] * 90
-        )
-
-    if "Goals" in scouting_df.columns and "Assists" in scouting_df.columns:
-        scouting_df["Goals + Assists per 90"] = (
-            (scouting_df["Goals"] + scouting_df["Assists"])
-            / scouting_df["Minutes Played"]
-            * 90
-        )
-
-    if "Expected Goals" in scouting_df.columns:
-        scouting_df["Expected Goals per 90"] = (
-            scouting_df["Expected Goals"] / scouting_df["Minutes Played"] * 90
-        )
-
-    if "Expected Assisted Goals" in scouting_df.columns:
-        scouting_df["Expected Assisted Goals per 90"] = (
-            scouting_df["Expected Assisted Goals"]
-            / scouting_df["Minutes Played"]
-            * 90
-        )
-
-    if (
-        "Expected Goals" in scouting_df.columns
-        and "Expected Assisted Goals" in scouting_df.columns
-    ):
-        scouting_df["Expected Goals + Expected Assists per 90"] = (
-            (
-                scouting_df["Expected Goals"]
-                + scouting_df["Expected Assisted Goals"]
-            )
-            / scouting_df["Minutes Played"]
-            * 90
-        )
-
-    if "Progressive Carries" in scouting_df.columns:
-        scouting_df["Progressive Carries per 90"] = (
-            scouting_df["Progressive Carries"]
-            / scouting_df["Minutes Played"]
-            * 90
-        )
-
-    if "Progressive Passes" in scouting_df.columns:
-        scouting_df["Progressive Passes per 90"] = (
-            scouting_df["Progressive Passes"]
-            / scouting_df["Minutes Played"]
-            * 90
-        )
-
-    if "Progressive Passes Received" in scouting_df.columns:
-        scouting_df["Progressive Passes Received per 90"] = (
-            scouting_df["Progressive Passes Received"]
-            / scouting_df["Minutes Played"]
-            * 90
-        )
 
     return scouting_df
 
@@ -202,35 +128,54 @@ def calculate_player_scores(
     if scoring_df.empty:
         return None
 
-    # Create missing score columns as 0 if the dataset does not have some metrics.
-    required_score_columns = {
-        "Goals per 90 Score": 0,
-        "Assists per 90 Score": 0,
-        "Expected Goals + Expected Assists per 90 Score": 0,
-        "Progressive Carries per 90 Score": 0,
-        "Progressive Passes per 90 Score": 0,
-    }
+    requested_weight = goal_weight + assist_weight + xg_weight + progression_weight
+    weighted_components = []
+    active_weight = 0
+    active_component_names = []
 
-    for col, default_value in required_score_columns.items():
-        if col not in scoring_df.columns:
-            scoring_df[col] = default_value
+    component_definitions = [
+        ("Goals per 90 Score", goal_weight, "goals"),
+        ("Assists per 90 Score", assist_weight, "assists"),
+        (
+            "Expected Goals + Expected Assists per 90 Score",
+            xg_weight,
+            "expected output",
+        ),
+    ]
 
-    total_weight = goal_weight + assist_weight + xg_weight + progression_weight
+    for score_column, weight, component_name in component_definitions:
+        if score_column in normalized_columns and weight > 0:
+            weighted_components.append(scoring_df[score_column] * weight)
+            active_weight += weight
+            active_component_names.append(component_name)
 
-    if total_weight == 0:
-        total_weight = 1
+    progression_columns = [
+        column
+        for column in [
+            "Progressive Carries per 90 Score",
+            "Progressive Passes per 90 Score",
+        ]
+        if column in normalized_columns
+    ]
+    if progression_columns and progression_weight > 0:
+        progression_score = scoring_df[progression_columns].mean(axis=1)
+        weighted_components.append(progression_score * progression_weight)
+        active_weight += progression_weight
+        active_component_names.append("progression")
 
-    progression_score = (
-        scoring_df["Progressive Carries per 90 Score"]
-        + scoring_df["Progressive Passes per 90 Score"]
-    ) / 2
+    if active_weight == 0:
+        return None
 
-    scoring_df["Player Score"] = (
-        scoring_df["Goals per 90 Score"] * goal_weight
-        + scoring_df["Assists per 90 Score"] * assist_weight
-        + scoring_df["Expected Goals + Expected Assists per 90 Score"] * xg_weight
-        + progression_score * progression_weight
-    ) / total_weight
+    total_component = weighted_components[0].copy()
+    for component in weighted_components[1:]:
+        total_component = total_component + component
+
+    scoring_df["Player Score"] = total_component / active_weight
+    scoring_df["Score Coverage %"] = round(
+        active_weight / requested_weight * 100,
+        1,
+    ) if requested_weight > 0 else 100.0
+    scoring_df["Score Components Used"] = ", ".join(active_component_names)
 
     scoring_df["Player Score"] = scoring_df["Player Score"].round(1)
 
@@ -240,6 +185,87 @@ def calculate_player_scores(
     )
 
     return scoring_df
+
+
+def calculate_role_percentile_scores(df, min_minutes=900):
+    """Rank players against peers in the same primary position.
+
+    Percentiles are more robust and understandable than comparing defenders,
+    midfielders, forwards and goalkeepers with one universal formula. Missing
+    row-level metrics reduce coverage but do not silently count as zero.
+    """
+
+    scoring_df = prepare_scouting_data(df)
+    required_columns = {"Primary Position", "Minutes Played"}
+    if not required_columns.issubset(scoring_df.columns):
+        return None
+
+    scoring_df = scoring_df[
+        scoring_df["Minutes Played"] >= min_minutes
+    ].copy()
+    scoring_df = scoring_df[
+        scoring_df["Primary Position"].isin(ROLE_SCORE_PROFILES)
+    ].copy()
+
+    if scoring_df.empty:
+        return None
+
+    role_results = []
+
+    for role, profile in ROLE_SCORE_PROFILES.items():
+        cohort = scoring_df[scoring_df["Primary Position"] == role].copy()
+        if cohort.empty:
+            continue
+
+        weighted_total = pd.Series(0.0, index=cohort.index)
+        available_weight = pd.Series(0.0, index=cohort.index)
+        profile_weight = sum(weight for _, weight, _ in profile)
+        metrics_used = []
+
+        for metric, weight, lower_is_better in profile:
+            if metric not in cohort.columns:
+                continue
+
+            numeric_metric = pd.to_numeric(cohort[metric], errors="coerce")
+            valid = numeric_metric.notna()
+            if not valid.any():
+                continue
+
+            percentile = numeric_metric.rank(pct=True, method="average") * 100
+            if lower_is_better:
+                percentile = 100 - percentile
+
+            percentile_column = f"{metric} Percentile"
+            cohort[percentile_column] = percentile.round(1)
+            weighted_total = weighted_total.add(percentile.fillna(0) * weight)
+            available_weight = available_weight.add(valid.astype(float) * weight)
+            metrics_used.append(metric)
+
+        valid_rows = available_weight > 0
+        cohort = cohort[valid_rows].copy()
+        if cohort.empty:
+            continue
+
+        cohort["Role Score"] = (
+            weighted_total[valid_rows] / available_weight[valid_rows]
+        ).round(1)
+        cohort["Role Score Coverage %"] = (
+            available_weight[valid_rows] / profile_weight * 100
+        ).round(1)
+        cohort["Role Metrics Used"] = ", ".join(metrics_used)
+        cohort["Role Cohort Size"] = len(cohort)
+        cohort["Role Rank"] = (
+            cohort["Role Score"].rank(method="min", ascending=False).astype(int)
+        )
+        role_results.append(cohort)
+
+    if not role_results:
+        return None
+
+    return (
+        pd.concat(role_results, ignore_index=True)
+        .sort_values(["Primary Position", "Role Score"], ascending=[True, False])
+    )
 
 
 def calculate_young_talent_scores(

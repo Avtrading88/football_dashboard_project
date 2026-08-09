@@ -3,6 +3,11 @@ import pandas as pd
 import streamlit as st
 
 from src.config import DATA_PATH
+from src.feature_engineering import (
+    BASE_NUMERIC_COLUMNS,
+    add_derived_metrics,
+    add_player_identity_columns,
+)
 
 
 def clean_league_name(value):
@@ -61,6 +66,25 @@ def load_data():
         "PKatt": "Penalties Attempted",
         "CrdY": "Yellow Cards",
         "CrdR": "Red Cards",
+        "G+A-PK": "Non-Penalty Goals + Assists",
+        "Sh": "Shots",
+        "SoT": "Shots on Target",
+        "SoT%": "Shots on Target Percentage",
+        "Sh/90": "Shots per 90",
+        "SoT/90": "Shots on Target per 90",
+        "G/Sh": "Goals per Shot",
+        "G/SoT": "Goals per Shot on Target",
+        "PK_stats_shooting": "Shooting Penalty Goals",
+        "PKatt_stats_shooting": "Shooting Penalties Attempted",
+        "Crs": "Crosses",
+        "TklW": "Tackles Won",
+        "Int": "Interceptions",
+        "Fld": "Fouled",
+        "CrdY_stats_misc": "Misc Yellow Cards",
+        "CrdR_stats_misc": "Misc Red Cards",
+        "2CrdY": "Second Yellow Cards",
+        "Fls": "Fouls Committed",
+        "OG": "Own Goals",
         "xG": "Expected Goals",
         "npxG": "Non-Penalty Expected Goals",
         "xAG": "Expected Assisted Goals",
@@ -79,6 +103,8 @@ def load_data():
         "PKm": "Penalties Missed",
         "Mean Age": "Average Age",
         "Saves": "Saves",
+        "SoTA": "Shots on Target Against",
+        "Save%": "Save Percentage",
         "GA": "Goals Against",
         "GA90": "Goals Against per 90",
     }
@@ -86,7 +112,7 @@ def load_data():
     df = df.rename(columns=rename_columns)
 
     if "Nationality" in df.columns:
-        df["Nationality"] = df["Nationality"].astype(str).str.replace(
+        df["Nationality"] = df["Nationality"].astype("string").str.replace(
             r"^[a-z]{2,3}\s+",
             "",
             regex=True
@@ -95,46 +121,21 @@ def load_data():
     if "League" in df.columns:
         df["League"] = df["League"].apply(clean_league_name)
 
-    numeric_columns = [
-        "Age",
-        "Birth Year",
-        "Matches Played",
-        "Starts",
-        "Minutes Played",
-        "Full Match Equivalents",
-        "Goals",
-        "Assists",
-        "Goals + Assists",
-        "Non-Penalty Goals",
-        "Penalty Goals",
-        "Penalties Attempted",
-        "Yellow Cards",
-        "Red Cards",
-        "Expected Goals",
-        "Non-Penalty Expected Goals",
-        "Expected Assisted Goals",
-        "Non-Penalty xG + Expected Assists",
-        "Progressive Carries",
-        "Progressive Passes",
-        "Progressive Passes Received",
-        "Wins",
-        "Draws",
-        "Losses",
-        "Clean Sheets",
-        "Clean Sheet Percentage",
-        "Penalties Faced",
-        "Penalties Allowed",
-        "Penalties Saved",
-        "Penalties Missed",
+    numeric_columns = BASE_NUMERIC_COLUMNS + [
+        "Non-Penalty Goals + Assists",
+        "Shooting Penalty Goals",
+        "Shooting Penalties Attempted",
+        "Misc Yellow Cards",
+        "Misc Red Cards",
         "Average Age",
-        "Saves",
-        "Goals Against",
-        "Goals Against per 90",
     ]
 
     for col in numeric_columns:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce")
+
+    df = add_player_identity_columns(df)
+    df = add_derived_metrics(df)
 
     # Convert whole-number numeric columns into integers.
     df = convert_whole_number_columns_to_int(df)

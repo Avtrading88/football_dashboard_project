@@ -24,7 +24,9 @@ from src.player_radar import (
 
 from src.player_scouting import (
     calculate_player_scores,
+    calculate_role_percentile_scores,
     calculate_young_talent_scores,
+    ROLE_SCORE_PROFILES,
 )
 
 from src.league_analysis import (
@@ -46,7 +48,10 @@ from src.player_predictions import (
 
 def show_overview_page(filtered_df):
     """Show the main dashboard page."""
-    players_count = filtered_df["Player Name"].nunique()
+    player_identity_column = (
+        "Player ID" if "Player ID" in filtered_df.columns else "Player Name"
+    )
+    players_count = filtered_df[player_identity_column].nunique()
     goals_total = int(filtered_df["Goals"].sum()) if "Goals" in filtered_df.columns else 0
 
     space_left, col1, gap, col2, space_right = st.columns([0.08, 1, 0.04, 1, 0.08])
@@ -130,9 +135,9 @@ def show_overview_page(filtered_df):
         else:
             competition_name = "All Competitions"
 
-        st.subheader("Average Goals per League by Competition")
+        st.subheader("Average Goals per Player")
 
-        league_players_count = filtered_df["Player Name"].nunique()
+        league_players_count = filtered_df[player_identity_column].nunique()
         league_goals_total = int(filtered_df["Goals"].sum()) if "Goals" in filtered_df.columns else 0
 
         avg_goals = (
@@ -149,7 +154,7 @@ def show_overview_page(filtered_df):
                 value=avg_goals,
                 number={"font": {"size": 42, "color": TEXT_LIGHT}},
                 title={
-                    "text": f"Average Goals per League<br><span style='font-size:16px;color:#B7FF3C'>{competition_name}</span>",
+                    "text": f"Average Goals per Player<br><span style='font-size:16px;color:#B7FF3C'>{competition_name}</span>",
                     "font": {"size": 20, "color": TEXT_LIGHT},
                 },
                 gauge={
@@ -210,8 +215,8 @@ def show_overview_page(filtered_df):
 
         players_by_position = (
             filtered_df.groupby("Position", as_index=False)
-            .agg({"Player Name": "nunique"})
-            .rename(columns={"Player Name": "Number of Players"})
+            .agg({player_identity_column: "nunique"})
+            .rename(columns={player_identity_column: "Number of Players"})
             .sort_values("Number of Players", ascending=False)
         )
 
@@ -264,14 +269,76 @@ def show_overview_page(filtered_df):
         chart_layout(fig, 430)
         st.plotly_chart(fig, width="stretch")
 
+    space_left, col7, gap, col8, space_right = st.columns([0.08, 1, 0.04, 1, 0.08])
+
+    reliable_players = filtered_df[
+        filtered_df["Minutes Played"] >= 500
+    ].copy()
+
+    with col7:
+        st.subheader("Shooting Performance")
+        shooting_columns = [
+            "Player Name", "Club", "Shots on Target per 90",
+            "Shot Accuracy Percentage", "Goal Conversion Percentage",
+        ]
+        shooting_columns = [
+            column for column in shooting_columns if column in reliable_players.columns
+        ]
+        shooting_df = (
+            reliable_players.dropna(subset=["Shots on Target per 90"])
+            .sort_values("Shots on Target per 90", ascending=False)
+            .head(10)
+        )
+        centered_dataframe(shooting_df[shooting_columns])
+        fig = make_horizontal_bar(
+            shooting_df.sort_values("Shots on Target per 90"),
+            "Shots on Target per 90",
+            "Player Name",
+            "Player Name",
+            "Top Players by Shots on Target per 90",
+            "Shots on target per 90",
+            "Player",
+            height=430,
+            show_legend=False,
+        )
+        st.plotly_chart(fig, width="stretch")
+
+    with col8:
+        st.subheader("Defensive Contribution")
+        defensive_columns = [
+            "Player Name", "Club", "Tackles Won per 90",
+            "Interceptions per 90", "Defensive Actions per 90",
+        ]
+        defensive_df = (
+            reliable_players.dropna(subset=["Defensive Actions per 90"])
+            .sort_values("Defensive Actions per 90", ascending=False)
+            .head(10)
+        )
+        centered_dataframe(defensive_df[defensive_columns])
+        fig = make_horizontal_bar(
+            defensive_df.sort_values("Defensive Actions per 90"),
+            "Defensive Actions per 90",
+            "Player Name",
+            "Player Name",
+            "Top Players by Defensive Actions per 90",
+            "Tackles won + interceptions per 90",
+            "Player",
+            height=430,
+            show_legend=False,
+        )
+        st.plotly_chart(fig, width="stretch")
+
 
 def show_competitions_page(filtered_df):
     """Show league comparison charts."""
     st.subheader("Competition Comparison")
+    player_identity_column = (
+        "Player ID" if "Player ID" in filtered_df.columns else "Player Name"
+    )
     competition_df = (
         filtered_df.groupby("League", as_index=False)
         .agg({
-            "Player Name": "nunique",
+            player_identity_column: "nunique",
             "Club": "nunique",
             "Goals": "sum",
             "Assists": "sum",
@@ -279,9 +346,9 @@ def show_competitions_page(filtered_df):
             "Age": "mean"
         })
         .rename(columns={
-            "Player Name": "Players",
+            player_identity_column: "Players",
             "Club": "Clubs",
-            "Matches Played": "Total Matches Played",
+            "Matches Played": "Player Appearances",
             "Age": "Average Age"
         })
         .sort_values("Goals", ascending=False)
@@ -290,7 +357,7 @@ def show_competitions_page(filtered_df):
     centered_dataframe(competition_df)
     metric = st.selectbox(
         "Choose metric to compare",
-        ["Players", "Clubs", "Goals", "Assists", "Total Matches Played", "Average Age"]
+        ["Players", "Clubs", "Goals", "Assists", "Player Appearances", "Average Age"]
     )
     competition_plot = competition_df.sort_values(metric, ascending=False)
     fig = make_horizontal_bar(
@@ -337,8 +404,10 @@ def show_goalkeepers_page(filtered_df):
         return
 
     goalkeeper_columns = [
-        "Player Name", "Club", "Age", "Matches Played", "Saves",
-        "Clean Sheets", "Goals Against", "Goals Against per 90"
+        "Player Name", "Club", "Age", "Matches Played", "Minutes Played",
+        "Shots on Target Against", "Saves", "Save Percentage",
+        "Clean Sheets", "Clean Sheet Percentage", "Goals Against",
+        "Goals Against per 90", "Penalty Save Percentage",
     ]
     goalkeeper_columns = [col for col in goalkeeper_columns if col in goalkeepers.columns]
     goalkeepers_table = goalkeepers[goalkeeper_columns].copy()
@@ -381,11 +450,11 @@ def show_similarity_page(filtered_df):
     available_features = get_available_similarity_features(filtered_df)
 
     default_features = [
-        "Age",
-        "Minutes Played",
         "Goals per 90",
         "Assists per 90",
-        "Goals + Assists per 90",
+        "Shots on Target per 90",
+        "Crosses per 90",
+        "Defensive Actions per 90",
     ]
 
     default_features = [
@@ -393,15 +462,25 @@ def show_similarity_page(filtered_df):
         if feature in available_features
     ]
 
-    players = sorted(filtered_df["Player Name"].dropna().unique())
+    selection_df = (
+        filtered_df[["Player Record ID", "Player Selection Label"]]
+        .dropna()
+        .drop_duplicates("Player Record ID")
+        .sort_values("Player Selection Label")
+    )
+    players = selection_df["Player Selection Label"].tolist()
+    player_id_by_label = dict(
+        zip(selection_df["Player Selection Label"], selection_df["Player Record ID"])
+    )
 
     col1, col2, col3 = st.columns([1.5, 1, 1])
 
     with col1:
-        selected_player = st.selectbox(
+        selected_player_label = st.selectbox(
             "Choose a player",
             players
         )
+        selected_player = player_id_by_label[selected_player_label]
 
     with col2:
         top_n = st.slider(
@@ -453,7 +532,7 @@ def show_similarity_page(filtered_df):
     prepared_df = prepare_similarity_data(filtered_df)
 
     selected_player_df = prepared_df[
-        prepared_df["Player Name"] == selected_player
+        prepared_df["Player Record ID"] == selected_player
     ].copy()
 
     st.markdown("### Selected Player")
@@ -487,7 +566,7 @@ def show_similarity_page(filtered_df):
 
     st.markdown("---")
 
-    st.markdown(f"### Players most similar to **{selected_player}**")
+    st.markdown(f"### Players most similar to **{selected_player_label}**")
 
     display_columns = [
         "Player Name",
@@ -532,11 +611,11 @@ def show_clustering_page(filtered_df):
     available_features = get_available_clustering_features(filtered_df)
 
     default_features = [
-        "Age",
-        "Minutes Played",
         "Goals per 90",
         "Assists per 90",
-        "Goals + Assists per 90",
+        "Shots on Target per 90",
+        "Crosses per 90",
+        "Defensive Actions per 90",
     ]
 
     default_features = [
@@ -833,9 +912,9 @@ def show_radar_page(filtered_df):
     default_features = [
         "Goals per 90",
         "Assists per 90",
-        "Goals + Assists per 90",
-        "Expected Goals per 90",
-        "Expected Assisted Goals per 90",
+        "Shots on Target per 90",
+        "Crosses per 90",
+        "Defensive Actions per 90",
     ]
 
     default_features = [
@@ -843,7 +922,16 @@ def show_radar_page(filtered_df):
         if feature in available_features
     ]
 
-    players = sorted(filtered_df["Player Name"].dropna().unique())
+    selection_df = (
+        filtered_df[["Player Record ID", "Player Selection Label"]]
+        .dropna()
+        .drop_duplicates("Player Record ID")
+        .sort_values("Player Selection Label")
+    )
+    players = selection_df["Player Selection Label"].tolist()
+    player_id_by_label = dict(
+        zip(selection_df["Player Selection Label"], selection_df["Player Record ID"])
+    )
 
     selected_players = st.multiselect(
         "Choose players to compare",
@@ -886,7 +974,7 @@ def show_radar_page(filtered_df):
 
     radar_normalized_df, original_values_df = create_radar_comparison_data(
         df=filtered_df,
-        selected_players=selected_players,
+        selected_players=[player_id_by_label[player] for player in selected_players],
         selected_features=selected_features,
         min_minutes=min_minutes
     )
@@ -920,7 +1008,7 @@ def show_radar_page(filtered_df):
                 r=values,
                 theta=categories,
                 fill="toself",
-                name=row["Player Name"],
+                name=row.get("Player Selection Label", row["Player Name"]),
                 hovertemplate="<b>%{theta}</b><br>Score: %{r:.1f}/100<extra></extra>",
             )
         )
@@ -1029,9 +1117,10 @@ def show_scouting_page(filtered_df):
         "Simple meaning: Player Score ranks overall performance. Young Talent Score ranks young players based on performance, age, and playing time."
     )
 
-    tab1, tab2 = st.tabs([
+    tab1, tab2, tab3 = st.tabs([
         "Player Scoring System",
-        "Young Talent Detection"
+        "Young Talent Detection",
+        "Role-Specific Score",
     ])
 
     with tab1:
@@ -1122,6 +1211,8 @@ def show_scouting_page(filtered_df):
                 "Expected Goals + Expected Assists per 90",
                 "Progressive Carries per 90",
                 "Progressive Passes per 90",
+                "Score Coverage %",
+                "Score Components Used",
                 "Player Score",
             ]
 
@@ -1329,6 +1420,99 @@ def show_scouting_page(filtered_df):
 
             st.plotly_chart(fig_talent, width="stretch")
 
+    with tab3:
+        st.markdown("### Role-Specific Player Ranking")
+
+        st.caption(
+            "Players are compared only with peers in their primary position. "
+            "Forwards, midfielders, defenders and goalkeepers use different metrics."
+        )
+
+        min_minutes_role = st.slider(
+            "Minimum minutes for role-specific ranking",
+            min_value=0,
+            max_value=4000,
+            value=900,
+            step=100,
+        )
+
+        role_scores = calculate_role_percentile_scores(
+            filtered_df,
+            min_minutes=min_minutes_role,
+        )
+
+        if role_scores is None or role_scores.empty:
+            st.warning("No role-specific scores are available for the selected filters.")
+        else:
+            role_labels = {
+                "FW": "Forwards",
+                "MF": "Midfielders",
+                "DF": "Defenders",
+                "GK": "Goalkeepers",
+            }
+            available_roles = [
+                role for role in ["FW", "MF", "DF", "GK"]
+                if role in role_scores["Primary Position"].values
+            ]
+            selected_role = st.selectbox(
+                "Choose role",
+                available_roles,
+                format_func=lambda role: role_labels.get(role, role),
+            )
+
+            role_table = role_scores[
+                role_scores["Primary Position"] == selected_role
+            ].sort_values("Role Score", ascending=False)
+
+            role_metrics = [
+                metric
+                for metric, _, _ in ROLE_SCORE_PROFILES[selected_role]
+                if metric in role_table.columns
+            ]
+            role_columns = [
+                "Role Rank",
+                "Player Name",
+                "Club",
+                "League",
+                "Age",
+                "Minutes Played",
+                "Role Score",
+                "Role Score Coverage %",
+            ] + role_metrics
+
+            centered_dataframe(role_table[role_columns].head(30))
+
+            import plotly.express as px
+
+            chart_df = role_table.head(20).sort_values("Role Score").copy()
+            fig_role = px.bar(
+                chart_df,
+                x="Role Score",
+                y="Player Selection Label",
+                orientation="h",
+                text="Role Score",
+                color="Role Score",
+                title=f"Top {role_labels.get(selected_role, selected_role)} by Role Score",
+            )
+            fig_role.update_traces(textposition="outside")
+            fig_role.update_layout(
+                xaxis_title="Position-relative percentile score (0–100)",
+                yaxis_title="Player",
+                height=650,
+                showlegend=False,
+            )
+            chart_layout(fig_role, 650)
+            st.plotly_chart(fig_role, width="stretch")
+
+            with st.expander("Role score methodology"):
+                st.write(
+                    "Each metric is converted to a percentile inside the selected "
+                    "position cohort. Lower-is-better discipline and goals-against "
+                    "metrics are reversed. Missing values reduce coverage instead "
+                    "of being treated as zero."
+                )
+                st.write(ROLE_SCORE_PROFILES[selected_role])
+
 def show_league_analysis_page(filtered_df):
     """Show advanced league comparison analysis."""
 
@@ -1337,8 +1521,8 @@ def show_league_analysis_page(filtered_df):
     st.markdown(
         """
         <div style="color:#D4E2F5; font-size:16px; font-weight:600; margin-bottom:14px;">
-            Compare leagues by attacking output, player volume, average age, expected goals,
-            assists, progressive actions, and discipline.
+            Compare leagues by attacking output, shooting, defensive actions, player volume,
+            average age, assists, and discipline. Optional xG metrics appear when available.
         </div>
         """,
         unsafe_allow_html=True
@@ -1526,11 +1710,9 @@ def show_pca_page(filtered_df):
     default_features = [
         "Goals per 90",
         "Assists per 90",
-        "Goals + Assists per 90",
-        "Expected Goals per 90",
-        "Expected Assisted Goals per 90",
-        "Progressive Carries per 90",
-        "Progressive Passes per 90",
+        "Shots on Target per 90",
+        "Crosses per 90",
+        "Defensive Actions per 90",
     ]
 
     default_features = [
@@ -1705,7 +1887,7 @@ def show_predictions_page(filtered_df):
         """
         <div style="color:#D4E2F5; font-size:16px; font-weight:600; margin-bottom:14px;">
             This page adds machine learning predictions and advanced football metrics.
-            You can predict player goals, classify top performers, and analyze xG-based efficiency.
+            You can estimate same-season goal output, classify top performers, and analyze available performance metrics.
         </div>
         """,
         unsafe_allow_html=True
@@ -1733,7 +1915,7 @@ def show_predictions_page(filtered_df):
 
         st.caption(
             "This model estimates a player's goal output within the available season data based on minutes, "
-            "position, league, xG, assists, and progression metrics. It is not a next-season forecast."
+            "position, league, assists, shooting, and other available metrics. It is not a next-season forecast."
         )
 
         min_minutes_goals = st.slider(
@@ -1756,7 +1938,7 @@ def show_predictions_page(filtered_df):
         else:
             st.markdown("#### Model Performance")
 
-            c1, c2, c3, c4, c5 = st.columns(5)
+            c1, c2, c3, c4, c5, c6 = st.columns(6)
 
             with c1:
                 st.metric("MAE", goal_metrics["MAE"])
@@ -1768,9 +1950,12 @@ def show_predictions_page(filtered_df):
                 st.metric("R² Score", goal_metrics["R2 Score"])
 
             with c4:
-                st.metric("Training Rows", goal_metrics["Training Rows"])
+                st.metric("Baseline MAE", goal_metrics["Baseline MAE"])
 
             with c5:
+                st.metric("Training Rows", goal_metrics["Training Rows"])
+
+            with c6:
                 st.metric("Test Rows", goal_metrics["Test Rows"])
 
             st.caption(
@@ -1903,23 +2088,22 @@ def show_predictions_page(filtered_df):
                 st.metric("Accuracy", classifier_metrics["Accuracy"])
 
             with c2:
-                st.metric("F1 Score", classifier_metrics["F1 Score"])
+                st.metric("Baseline Accuracy", classifier_metrics["Baseline Accuracy"])
 
             with c3:
-                st.metric(
-                    "Top Threshold",
-                    classifier_metrics["Top Performer Threshold"]
-                )
+                st.metric("Balanced Accuracy", classifier_metrics["Balanced Accuracy"])
 
             with c4:
-                st.metric("Training Rows", classifier_metrics["Training Rows"])
+                st.metric("F1 Score", classifier_metrics["F1 Score"])
 
             with c5:
-                st.metric("Test Rows", classifier_metrics["Test Rows"])
+                st.metric("ROC AUC", classifier_metrics["ROC AUC"])
 
             st.caption(
-                "F1 Score is useful when the top performer class is smaller than the normal player class. "
-                "Higher F1 means better balance between precision and recall."
+                f"Precision: {classifier_metrics['Precision']} · Recall: {classifier_metrics['Recall']} · "
+                f"Top threshold: {classifier_metrics['Top Performer Threshold']} · "
+                f"Training rows: {classifier_metrics['Training Rows']} · Test rows: {classifier_metrics['Test Rows']}. "
+                "Compare model accuracy with baseline accuracy before judging performance."
             )
 
             st.markdown("#### Top Performer Probability Table")
@@ -1999,10 +2183,11 @@ def show_predictions_page(filtered_df):
                 st.write(classifier_features)
 
     with tab3:
-        st.markdown("### Advanced Football Metrics / xG Analysis")
+        st.markdown("### Advanced Football Metrics")
 
         st.caption(
-            "This section adds xG efficiency, expected assist analysis, per-90 metrics, progressive actions, and discipline risk."
+            "This section shows shooting, creative, defensive, discipline and goalkeeper metrics. "
+            "xG metrics appear automatically when the loaded dataset contains xG columns."
         )
 
         min_minutes_metrics = st.slider(
@@ -2041,6 +2226,19 @@ def show_predictions_page(filtered_df):
                 "Goals per 90",
                 "Assists per 90",
                 "Goals + Assists per 90",
+                "Shots per 90",
+                "Shots on Target per 90",
+                "Shot Accuracy Percentage",
+                "Goal Conversion Percentage",
+                "Crosses per 90",
+                "Tackles Won per 90",
+                "Interceptions per 90",
+                "Defensive Actions per 90",
+                "Fouled per 90",
+                "Fouls Committed per 90",
+                "Save Percentage",
+                "Clean Sheet Percentage",
+                "Penalty Save Percentage",
                 "Expected Goals per 90",
                 "Expected Assisted Goals per 90",
                 "Expected Goals + Expected Assists per 90",
@@ -2120,4 +2318,3 @@ def show_predictions_page(filtered_df):
                 st.plotly_chart(fig_xg, width="stretch")
             else:
                 st.info("xG columns are not available in this dataset.")
-

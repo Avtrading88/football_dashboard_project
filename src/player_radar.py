@@ -1,6 +1,8 @@
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 
+from src.feature_engineering import ordered_numeric_features, prepare_analytics_frame
+
 
 def prepare_radar_data(df):
     """
@@ -8,56 +10,7 @@ def prepare_radar_data(df):
     Adds per-90 metrics where possible.
     """
 
-    radar_df = df.copy()
-
-    useful_columns = [
-        "Player Name",
-        "Nationality",
-        "Position",
-        "Club",
-        "League",
-        "Age",
-        "Minutes Played",
-        "Matches Played",
-        "Goals",
-        "Assists",
-        "Goals + Assists",
-        "Expected Goals",
-        "Expected Assisted Goals",
-        "Non-Penalty Expected Goals",
-        "Non-Penalty xG + Expected Assists",
-        "Progressive Carries",
-        "Progressive Passes",
-        "Progressive Passes Received",
-        "Yellow Cards",
-        "Red Cards",
-    ]
-
-    existing_columns = [
-        col for col in useful_columns
-        if col in radar_df.columns
-    ]
-
-    radar_df = radar_df[existing_columns].copy()
-
-    text_columns = [
-        "Player Name",
-        "Nationality",
-        "Position",
-        "Club",
-        "League",
-    ]
-
-    numeric_columns = [
-        col for col in radar_df.columns
-        if col not in text_columns
-    ]
-
-    for col in numeric_columns:
-        radar_df[col] = pd.to_numeric(
-            radar_df[col],
-            errors="coerce"
-        )
+    radar_df = prepare_analytics_frame(df)
 
     if "Minutes Played" not in radar_df.columns:
         return radar_df
@@ -70,69 +23,6 @@ def prepare_radar_data(df):
         radar_df["Minutes Played"] > 0
     ].copy()
 
-    if "Goals" in radar_df.columns:
-        radar_df["Goals per 90"] = (
-            radar_df["Goals"] / radar_df["Minutes Played"] * 90
-        )
-
-    if "Assists" in radar_df.columns:
-        radar_df["Assists per 90"] = (
-            radar_df["Assists"] / radar_df["Minutes Played"] * 90
-        )
-
-    if "Goals" in radar_df.columns and "Assists" in radar_df.columns:
-        radar_df["Goals + Assists per 90"] = (
-            (radar_df["Goals"] + radar_df["Assists"])
-            / radar_df["Minutes Played"]
-            * 90
-        )
-
-    if "Expected Goals" in radar_df.columns:
-        radar_df["Expected Goals per 90"] = (
-            radar_df["Expected Goals"] / radar_df["Minutes Played"] * 90
-        )
-
-    if "Expected Assisted Goals" in radar_df.columns:
-        radar_df["Expected Assisted Goals per 90"] = (
-            radar_df["Expected Assisted Goals"]
-            / radar_df["Minutes Played"]
-            * 90
-        )
-
-    if (
-        "Expected Goals" in radar_df.columns
-        and "Expected Assisted Goals" in radar_df.columns
-    ):
-        radar_df["Expected Goals + Expected Assists per 90"] = (
-            (
-                radar_df["Expected Goals"]
-                + radar_df["Expected Assisted Goals"]
-            )
-            / radar_df["Minutes Played"]
-            * 90
-        )
-
-    if "Progressive Carries" in radar_df.columns:
-        radar_df["Progressive Carries per 90"] = (
-            radar_df["Progressive Carries"]
-            / radar_df["Minutes Played"]
-            * 90
-        )
-
-    if "Progressive Passes" in radar_df.columns:
-        radar_df["Progressive Passes per 90"] = (
-            radar_df["Progressive Passes"]
-            / radar_df["Minutes Played"]
-            * 90
-        )
-
-    if "Progressive Passes Received" in radar_df.columns:
-        radar_df["Progressive Passes Received per 90"] = (
-            radar_df["Progressive Passes Received"]
-            / radar_df["Minutes Played"]
-            * 90
-        )
-
     return radar_df
 
 
@@ -143,56 +33,7 @@ def get_available_radar_features(df):
 
     radar_df = prepare_radar_data(df)
 
-    blocked_columns = [
-        "Player Name",
-        "Nationality",
-        "Position",
-        "Club",
-        "League",
-    ]
-
-    available_features = []
-
-    for col in radar_df.columns:
-        if col in blocked_columns:
-            continue
-
-        if pd.api.types.is_numeric_dtype(radar_df[col]):
-            available_features.append(col)
-
-    preferred_order = [
-        "Goals per 90",
-        "Assists per 90",
-        "Goals + Assists per 90",
-        "Expected Goals per 90",
-        "Expected Assisted Goals per 90",
-        "Expected Goals + Expected Assists per 90",
-        "Progressive Carries per 90",
-        "Progressive Passes per 90",
-        "Progressive Passes Received per 90",
-        "Goals",
-        "Assists",
-        "Expected Goals",
-        "Expected Assisted Goals",
-        "Progressive Carries",
-        "Progressive Passes",
-        "Progressive Passes Received",
-        "Age",
-        "Minutes Played",
-        "Matches Played",
-    ]
-
-    ordered_features = [
-        col for col in preferred_order
-        if col in available_features
-    ]
-
-    remaining_features = [
-        col for col in available_features
-        if col not in ordered_features
-    ]
-
-    return ordered_features + remaining_features
+    return ordered_numeric_features(radar_df)
 
 
 def create_radar_comparison_data(
@@ -213,8 +54,15 @@ def create_radar_comparison_data(
             radar_df["Minutes Played"] >= min_minutes
         ].copy()
 
+    identity_column = "Player Name"
+    if (
+        "Player Record ID" in radar_df.columns
+        and any(player in radar_df["Player Record ID"].values for player in selected_players)
+    ):
+        identity_column = "Player Record ID"
+
     radar_df = radar_df[
-        radar_df["Player Name"].isin(selected_players)
+        radar_df[identity_column].isin(selected_players)
     ].copy()
 
     selected_features = [
@@ -260,11 +108,14 @@ def create_radar_comparison_data(
         index=radar_df.index
     )
 
-    radar_normalized_df = radar_df[
-        [
+    existing_base_columns = [
+        col for col in [
+            "Player Record ID",
+            "Player Selection Label",
             "Player Name",
             "Nationality",
             "Position",
+            "Primary Position",
             "Club",
             "League",
             "Age",
@@ -272,10 +123,6 @@ def create_radar_comparison_data(
             "Goals",
             "Assists",
         ]
-    ].copy()
-
-    existing_base_columns = [
-        col for col in radar_normalized_df.columns
         if col in radar_df.columns
     ]
 

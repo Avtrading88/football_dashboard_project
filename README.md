@@ -2,7 +2,7 @@
 
 A modern Streamlit dashboard for exploring European football player statistics for the 2025/2026 season.
 
-The dashboard includes filters, KPI cards, player tables, league comparisons, goal and assist charts, card statistics, goalkeeper analysis, player similarity search, clustering, radar comparison, scouting scores, young talent detection, league analysis, player profile mapping, predictive models, and advanced football metrics.
+The dashboard includes filters, KPI cards, player tables, league comparisons, goal and assist charts, shooting and defensive analysis, goalkeeper analysis, transfer-safe player selection, similarity search, clustering, radar comparison, role-specific scouting scores, young talent detection, player profile mapping, predictive models, and advanced football metrics.
 
 ## Project Structure
 
@@ -28,6 +28,7 @@ football_dashboard_project/
     ├── charts.py
     ├── light_charts.py
     ├── filters.py
+    ├── feature_engineering.py
     ├── pages.py
     ├── light_pages.py
     ├── player_similarity.py
@@ -50,6 +51,12 @@ The dataset contains football player statistics for the 2025–2026 season from 
 
 This project uses the dataset for educational and portfolio purposes.
 
+### Data coverage and limitations
+
+The included snapshot contains 2,839 player-club rows and 53 source columns. It contains shooting, defensive, discipline, and goalkeeper statistics, but it does **not** contain xG, xAG, or progressive-action columns. The application therefore shows xG/progression features only when a future dataset actually provides those fields.
+
+Players who represented multiple clubs remain separate player-club records. A derived player ID groups those records for correct unique-player counts, while a separate record ID keeps transfer rows selectable in similarity and radar tools.
+
 ## What Each File Does
 
 | File                        | Purpose                                                                                 |
@@ -65,6 +72,7 @@ This project uses the dataset for educational and portfolio purposes.
 | `src/charts.py`             | Contains reusable Plotly chart functions for dark mode.                                 |
 | `src/light_charts.py`       | Contains reusable Plotly chart functions for light mode.                                |
 | `src/filters.py`            | Builds all sidebar filters.                                                             |
+| `src/feature_engineering.py`| Creates stable player identities and shared per-90, shooting, defensive, and goalkeeper metrics. |
 | `src/pages.py`              | Contains the dashboard pages for dark mode.                                             |
 | `src/light_pages.py`        | Contains the dashboard pages for light mode.                                            |
 | `src/player_similarity.py`  | Creates the player similarity feature using standardized metrics and cosine similarity. |
@@ -134,6 +142,7 @@ Then open the local Streamlit link in your browser.
 * Sidebar filters for league, club, position, nationality, age, matches, goals, assists, and player name
 * KPI cards for players, goals, assists, and average age
 * Top scorers and top assist players
+* Shooting-performance and defensive-contribution analysis
 * Goals and assists by league
 * Players by position
 * Cards by club
@@ -144,12 +153,14 @@ Then open the local Streamlit link in your browser.
 * Player clustering with understandable cluster profiles
 * Radar chart for player comparison
 * Custom player scoring system
+* Position-relative scouting scores for forwards, midfielders, defenders, and goalkeepers
 * Young talent detection
 * Advanced league comparison analysis
 * Player profile map using PCA
 * Predictive model for player goals
 * Predictive classifier for top performers
-* Advanced football metrics including xG efficiency, xAG analysis, per-90 metrics, progressive actions, and discipline risk
+* Advanced shooting, defensive, discipline, goalkeeper, and per-90 metrics
+* Optional xG and progression analytics when those columns are available
 * Cleaner numeric formatting, so whole numbers show as integers instead of values like `25.000000`
 
 ## Machine Learning and Analytics Features
@@ -168,7 +179,7 @@ The radar chart allows users to compare multiple players across selected statist
 
 ### Player Scoring System
 
-The player scoring system creates a custom score from 0 to 100 based on goals, assists, expected output, and progressive actions. Users can adjust the weights to change what matters most.
+The custom player scoring system creates a score from 0 to 100 and rebalances its denominator when optional metrics are unavailable instead of silently treating missing data as zero. The role-specific score compares players only with positional peers and uses different profiles for forwards, midfielders, defenders, and goalkeepers.
 
 ### Young Talent Detection
 
@@ -190,21 +201,21 @@ The dashboard includes two exploratory machine learning models:
 
 ### Advanced Football Metrics
 
-The advanced metrics section includes:
+The advanced metrics section includes the metrics actually supported by the bundled snapshot:
 
-* Goals minus expected goals
-* Goal efficiency ratio
-* Assists minus expected assisted goals
 * Goals per 90
+* Non-penalty goals per 90
 * Assists per 90
 * Goals + assists per 90
-* Expected goals per 90
-* Expected assisted goals per 90
-* Expected goals + expected assists per 90
-* Progressive carries per 90
-* Progressive passes per 90
-* Total progressive actions
+* Shots and shots on target per 90
+* Shooting accuracy and goal conversion
+* Crosses per 90
+* Tackles won, interceptions, and defensive actions per 90
+* Fouls committed and received per 90
+* Save, clean-sheet, and penalty-save percentages
 * Discipline risk
+
+If xG, xAG, or progression columns are supplied later, their derived metrics and charts are enabled automatically.
 
 ## Disclaimer
 

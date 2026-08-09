@@ -3,6 +3,8 @@ from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 
+from src.feature_engineering import ordered_numeric_features, prepare_analytics_frame
+
 
 def prepare_clustering_data(df):
     """
@@ -10,56 +12,7 @@ def prepare_clustering_data(df):
     Adds per-90 metrics where possible.
     """
 
-    cluster_df = df.copy()
-
-    useful_columns = [
-        "Player Name",
-        "Nationality",
-        "Position",
-        "Club",
-        "League",
-        "Age",
-        "Minutes Played",
-        "Matches Played",
-        "Goals",
-        "Assists",
-        "Goals + Assists",
-        "Expected Goals",
-        "Expected Assisted Goals",
-        "Non-Penalty Expected Goals",
-        "Non-Penalty xG + Expected Assists",
-        "Progressive Carries",
-        "Progressive Passes",
-        "Progressive Passes Received",
-        "Yellow Cards",
-        "Red Cards",
-    ]
-
-    existing_columns = [
-        col for col in useful_columns
-        if col in cluster_df.columns
-    ]
-
-    cluster_df = cluster_df[existing_columns].copy()
-
-    text_columns = [
-        "Player Name",
-        "Nationality",
-        "Position",
-        "Club",
-        "League",
-    ]
-
-    numeric_columns = [
-        col for col in cluster_df.columns
-        if col not in text_columns
-    ]
-
-    for col in numeric_columns:
-        cluster_df[col] = pd.to_numeric(
-            cluster_df[col],
-            errors="coerce"
-        )
+    cluster_df = prepare_analytics_frame(df)
 
     if "Minutes Played" not in cluster_df.columns:
         return cluster_df
@@ -72,69 +25,6 @@ def prepare_clustering_data(df):
         cluster_df["Minutes Played"] > 0
     ].copy()
 
-    if "Goals" in cluster_df.columns:
-        cluster_df["Goals per 90"] = (
-            cluster_df["Goals"] / cluster_df["Minutes Played"] * 90
-        )
-
-    if "Assists" in cluster_df.columns:
-        cluster_df["Assists per 90"] = (
-            cluster_df["Assists"] / cluster_df["Minutes Played"] * 90
-        )
-
-    if "Goals" in cluster_df.columns and "Assists" in cluster_df.columns:
-        cluster_df["Goals + Assists per 90"] = (
-            (cluster_df["Goals"] + cluster_df["Assists"])
-            / cluster_df["Minutes Played"]
-            * 90
-        )
-
-    if "Expected Goals" in cluster_df.columns:
-        cluster_df["Expected Goals per 90"] = (
-            cluster_df["Expected Goals"] / cluster_df["Minutes Played"] * 90
-        )
-
-    if "Expected Assisted Goals" in cluster_df.columns:
-        cluster_df["Expected Assisted Goals per 90"] = (
-            cluster_df["Expected Assisted Goals"]
-            / cluster_df["Minutes Played"]
-            * 90
-        )
-
-    if (
-        "Expected Goals" in cluster_df.columns
-        and "Expected Assisted Goals" in cluster_df.columns
-    ):
-        cluster_df["Expected Goals + Expected Assists per 90"] = (
-            (
-                cluster_df["Expected Goals"]
-                + cluster_df["Expected Assisted Goals"]
-            )
-            / cluster_df["Minutes Played"]
-            * 90
-        )
-
-    if "Progressive Carries" in cluster_df.columns:
-        cluster_df["Progressive Carries per 90"] = (
-            cluster_df["Progressive Carries"]
-            / cluster_df["Minutes Played"]
-            * 90
-        )
-
-    if "Progressive Passes" in cluster_df.columns:
-        cluster_df["Progressive Passes per 90"] = (
-            cluster_df["Progressive Passes"]
-            / cluster_df["Minutes Played"]
-            * 90
-        )
-
-    if "Progressive Passes Received" in cluster_df.columns:
-        cluster_df["Progressive Passes Received per 90"] = (
-            cluster_df["Progressive Passes Received"]
-            / cluster_df["Minutes Played"]
-            * 90
-        )
-
     return cluster_df
 
 
@@ -145,59 +35,7 @@ def get_available_clustering_features(df):
 
     cluster_df = prepare_clustering_data(df)
 
-    blocked_columns = [
-        "Player Name",
-        "Nationality",
-        "Position",
-        "Club",
-        "League",
-    ]
-
-    available_features = []
-
-    for col in cluster_df.columns:
-        if col in blocked_columns:
-            continue
-
-        if pd.api.types.is_numeric_dtype(cluster_df[col]):
-            available_features.append(col)
-
-    preferred_order = [
-        "Age",
-        "Minutes Played",
-        "Matches Played",
-        "Goals",
-        "Assists",
-        "Goals + Assists",
-        "Goals per 90",
-        "Assists per 90",
-        "Goals + Assists per 90",
-        "Expected Goals",
-        "Expected Assisted Goals",
-        "Expected Goals per 90",
-        "Expected Assisted Goals per 90",
-        "Expected Goals + Expected Assists per 90",
-        "Progressive Carries",
-        "Progressive Passes",
-        "Progressive Passes Received",
-        "Progressive Carries per 90",
-        "Progressive Passes per 90",
-        "Progressive Passes Received per 90",
-        "Yellow Cards",
-        "Red Cards",
-    ]
-
-    ordered_features = [
-        col for col in preferred_order
-        if col in available_features
-    ]
-
-    remaining_features = [
-        col for col in available_features
-        if col not in ordered_features
-    ]
-
-    return ordered_features + remaining_features
+    return ordered_numeric_features(cluster_df)
 
 
 def cluster_players(
@@ -327,9 +165,24 @@ def describe_cluster_profiles(cluster_summary, selected_features):
         elif any(feature in strengths for feature in [
             "Assists per 90",
             "Expected Assisted Goals per 90",
-            "Progressive Passes per 90"
+            "Progressive Passes per 90",
+            "Crosses per 90",
         ]):
             cluster_name = "Creative Players"
+
+        elif any(feature in strengths for feature in [
+            "Tackles Won per 90",
+            "Interceptions per 90",
+            "Defensive Actions per 90",
+        ]):
+            cluster_name = "Defensive Players"
+
+        elif any(feature in strengths for feature in [
+            "Save Percentage",
+            "Clean Sheet Percentage",
+            "Penalty Save Percentage",
+        ]):
+            cluster_name = "Goalkeeper Profiles"
 
         elif any(feature in strengths for feature in [
             "Progressive Carries per 90",

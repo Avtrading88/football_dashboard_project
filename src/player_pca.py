@@ -2,60 +2,15 @@ import pandas as pd
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 
+from src.feature_engineering import ordered_numeric_features, prepare_analytics_frame
+
 
 def prepare_pca_data(df):
     """
     Prepare player data for PCA profile visualization.
     """
 
-    pca_df = df.copy()
-
-    useful_columns = [
-        "Player Name",
-        "Nationality",
-        "Position",
-        "Club",
-        "League",
-        "Age",
-        "Minutes Played",
-        "Matches Played",
-        "Goals",
-        "Assists",
-        "Goals + Assists",
-        "Expected Goals",
-        "Expected Assisted Goals",
-        "Progressive Carries",
-        "Progressive Passes",
-        "Progressive Passes Received",
-        "Yellow Cards",
-        "Red Cards",
-    ]
-
-    existing_columns = [
-        col for col in useful_columns
-        if col in pca_df.columns
-    ]
-
-    pca_df = pca_df[existing_columns].copy()
-
-    text_columns = [
-        "Player Name",
-        "Nationality",
-        "Position",
-        "Club",
-        "League",
-    ]
-
-    numeric_columns = [
-        col for col in pca_df.columns
-        if col not in text_columns
-    ]
-
-    for col in numeric_columns:
-        pca_df[col] = pd.to_numeric(
-            pca_df[col],
-            errors="coerce"
-        )
+    pca_df = prepare_analytics_frame(df)
 
     if "Minutes Played" not in pca_df.columns:
         return pca_df
@@ -68,66 +23,6 @@ def prepare_pca_data(df):
         pca_df["Minutes Played"] > 0
     ].copy()
 
-    if "Goals" in pca_df.columns:
-        pca_df["Goals per 90"] = (
-            pca_df["Goals"] / pca_df["Minutes Played"] * 90
-        )
-
-    if "Assists" in pca_df.columns:
-        pca_df["Assists per 90"] = (
-            pca_df["Assists"] / pca_df["Minutes Played"] * 90
-        )
-
-    if "Goals" in pca_df.columns and "Assists" in pca_df.columns:
-        pca_df["Goals + Assists per 90"] = (
-            (pca_df["Goals"] + pca_df["Assists"])
-            / pca_df["Minutes Played"]
-            * 90
-        )
-
-    if "Expected Goals" in pca_df.columns:
-        pca_df["Expected Goals per 90"] = (
-            pca_df["Expected Goals"] / pca_df["Minutes Played"] * 90
-        )
-
-    if "Expected Assisted Goals" in pca_df.columns:
-        pca_df["Expected Assisted Goals per 90"] = (
-            pca_df["Expected Assisted Goals"]
-            / pca_df["Minutes Played"]
-            * 90
-        )
-
-    if (
-        "Expected Goals" in pca_df.columns
-        and "Expected Assisted Goals" in pca_df.columns
-    ):
-        pca_df["Expected Goals + Expected Assists per 90"] = (
-            (
-                pca_df["Expected Goals"]
-                + pca_df["Expected Assisted Goals"]
-            )
-            / pca_df["Minutes Played"]
-            * 90
-        )
-
-    if "Progressive Carries" in pca_df.columns:
-        pca_df["Progressive Carries per 90"] = (
-            pca_df["Progressive Carries"]
-            / pca_df["Minutes Played"] * 90
-        )
-
-    if "Progressive Passes" in pca_df.columns:
-        pca_df["Progressive Passes per 90"] = (
-            pca_df["Progressive Passes"]
-            / pca_df["Minutes Played"] * 90
-        )
-
-    if "Progressive Passes Received" in pca_df.columns:
-        pca_df["Progressive Passes Received per 90"] = (
-            pca_df["Progressive Passes Received"]
-            / pca_df["Minutes Played"] * 90
-        )
-
     return pca_df
 
 
@@ -138,55 +33,7 @@ def get_available_pca_features(df):
 
     pca_df = prepare_pca_data(df)
 
-    blocked_columns = [
-        "Player Name",
-        "Nationality",
-        "Position",
-        "Club",
-        "League",
-    ]
-
-    available_features = []
-
-    for col in pca_df.columns:
-        if col in blocked_columns:
-            continue
-
-        if pd.api.types.is_numeric_dtype(pca_df[col]):
-            available_features.append(col)
-
-    preferred_order = [
-        "Age",
-        "Minutes Played",
-        "Matches Played",
-        "Goals per 90",
-        "Assists per 90",
-        "Goals + Assists per 90",
-        "Expected Goals per 90",
-        "Expected Assisted Goals per 90",
-        "Expected Goals + Expected Assists per 90",
-        "Progressive Carries per 90",
-        "Progressive Passes per 90",
-        "Progressive Passes Received per 90",
-        "Goals",
-        "Assists",
-        "Expected Goals",
-        "Expected Assisted Goals",
-        "Progressive Carries",
-        "Progressive Passes",
-    ]
-
-    ordered_features = [
-        col for col in preferred_order
-        if col in available_features
-    ]
-
-    remaining_features = [
-        col for col in available_features
-        if col not in ordered_features
-    ]
-
-    return ordered_features + remaining_features
+    return ordered_numeric_features(pca_df)
 
 
 def create_player_pca(

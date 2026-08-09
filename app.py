@@ -80,7 +80,10 @@ st.markdown(
 )
 
 # KPI values.
-players_count = filtered_df["Player Name"].nunique()
+player_identity_column = (
+    "Player ID" if "Player ID" in filtered_df.columns else "Player Name"
+)
+players_count = filtered_df[player_identity_column].nunique()
 goals_total = int(filtered_df["Goals"].sum()) if "Goals" in filtered_df.columns else 0
 assists_total = int(filtered_df["Assists"].sum()) if "Assists" in filtered_df.columns else 0
 avg_age = round(filtered_df["Age"].mean(), 1) if "Age" in filtered_df.columns else 0
