@@ -29,6 +29,7 @@ if theme == "Light Mode":
         show_clustering_page,
         show_radar_page,
         show_scouting_page,
+        show_transfer_shortlist_page,
         show_league_analysis_page,
         show_pca_page,
         show_predictions_page,
@@ -45,6 +46,7 @@ else:
         show_clustering_page,
         show_radar_page,
         show_scouting_page,
+        show_transfer_shortlist_page,
         show_league_analysis_page,
         show_pca_page,
         show_predictions_page,
@@ -111,6 +113,7 @@ page = st.radio(
         "Player Clustering",
         "Player Radar",
         "Scouting",
+        "Transfer Shortlist",
         "League Analysis",
         "Player Profile Map",
         "Predictions & Metrics"
@@ -135,6 +138,8 @@ elif page == "Player Radar":
     show_radar_page(filtered_df)
 elif page == "Scouting":
     show_scouting_page(filtered_df)
+elif page == "Transfer Shortlist":
+    show_transfer_shortlist_page(players_df)
 elif page == "League Analysis":
     show_league_analysis_page(filtered_df)
 elif page == "Player Profile Map":

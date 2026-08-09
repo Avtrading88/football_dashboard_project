@@ -14,3 +14,5 @@ data/Top Goal Scorer Champions League 2025-2026.csv
 data/Europa League Season 2026 - 2026.csv
 
 .streamlit/config.toml
+data/transfer_shortlist.sqlite3*
+backups/

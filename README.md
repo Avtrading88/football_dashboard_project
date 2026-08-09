@@ -2,7 +2,7 @@
 
 A modern Streamlit dashboard for exploring European football player statistics for the 2025/2026 season.
 
-The dashboard includes filters, KPI cards, player tables, league comparisons, goal and assist charts, shooting and defensive analysis, goalkeeper analysis, transfer-safe player selection, similarity search, clustering, radar comparison, role-specific scouting scores, young talent detection, player profile mapping, predictive models, and advanced football metrics.
+The dashboard includes filters, KPI cards, player tables, league comparisons, goal and assist charts, shooting and defensive analysis, goalkeeper analysis, transfer-safe player selection, similarity search, clustering, radar comparison, role-specific scouting scores, young talent detection, a persistent recruitment shortlist, CSV/PDF scouting exports, player profile mapping, predictive models, and advanced football metrics.
 
 ## Project Structure
 
@@ -35,6 +35,9 @@ football_dashboard_project/
     ├── player_clustering.py
     ├── player_radar.py
     ├── player_scouting.py
+    ├── shortlist_store.py
+    ├── shortlist_ui.py
+    ├── scouting_exports.py
     ├── league_analysis.py
     ├── player_pca.py
     └── player_predictions.py
@@ -79,6 +82,9 @@ Players who represented multiple clubs remain separate player-club records. A de
 | `src/player_clustering.py`  | Groups players into similar performance profiles using KMeans clustering.               |
 | `src/player_radar.py`       | Creates radar chart data for comparing multiple players.                                |
 | `src/player_scouting.py`    | Calculates custom player scores and young talent scores.                                |
+| `src/shortlist_store.py`    | Persists transfer candidates, statuses, priorities, target fees, ratings, and notes in local SQLite. |
+| `src/shortlist_ui.py`       | Provides quick-add actions and the complete recruitment workspace in both themes.       |
+| `src/scouting_exports.py`   | Builds Excel-friendly shortlist CSV files and professional PDF scouting reports.         |
 | `src/league_analysis.py`    | Creates advanced league comparison summaries.                                           |
 | `src/player_pca.py`         | Creates the player profile map using PCA.                                               |
 | `src/player_predictions.py` | Builds predictive models and advanced football metrics.                                 |
@@ -155,6 +161,10 @@ Then open the local Streamlit link in your browser.
 * Custom player scoring system
 * Position-relative scouting scores for forwards, midfielders, defenders, and goalkeepers
 * Young talent detection
+* Persistent transfer shortlist with recruitment statuses and priorities
+* Scout notes, target fees, ratings, candidate editing, and removal
+* Side-by-side shortlist comparison with normalized radar analytics
+* CSV shortlist export and multi-player PDF scouting reports
 * Advanced league comparison analysis
 * Player profile map using PCA
 * Predictive model for player goals
@@ -184,6 +194,14 @@ The custom player scoring system creates a score from 0 to 100 and rebalances it
 ### Young Talent Detection
 
 The young talent feature ranks young players based on performance, age, and playing time. It is designed to highlight promising players who already show strong output.
+
+### Transfer Shortlist and Recruitment Workspace
+
+Players can be saved from the Players, Player Similarity, Scouting, or Transfer Shortlist pages. Saved candidates remain available after the app restarts in `data/transfer_shortlist.sqlite3`. The local database is excluded from Git so personal scout notes and recruitment decisions are not published accidentally.
+
+Each candidate supports the workflow statuses Watching, Scouted, Priority, Contacted, and Rejected. Recruitment staff can also assign Low, Medium, High, or Critical priority, record a target fee, add a 0-100 scout rating, keep notes, compare two to five candidates, and export selected entries as CSV or PDF.
+
+The SQLite storage is designed for local and single-user portfolio use. A future hosted multi-user deployment should move shortlist storage to a managed database with authentication and role-based access.
 
 ### Player Profile Map
 

@@ -44,6 +44,10 @@ from src.player_predictions import (
     train_top_performer_classifier,
     create_advanced_metrics_table,
 )
+from src.shortlist_ui import (
+    render_shortlist_quick_add,
+    show_transfer_shortlist_page as show_shared_transfer_shortlist_page,
+)
 
 
 def show_overview_page(filtered_df):
@@ -392,6 +396,11 @@ def show_players_page(filtered_df):
     else:
         centered_dataframe(filtered_df)
 
+    render_shortlist_quick_add(
+        filtered_df,
+        source_key="Players",
+    )
+
 
 def show_goalkeepers_page(filtered_df):
     """Show goalkeeper stats only."""
@@ -588,6 +597,16 @@ def show_similarity_page(filtered_df):
     ]
 
     centered_dataframe(similar_players_df[display_columns])
+
+    shortlist_candidates = pd.concat(
+        [selected_player_df, similar_players_df],
+        ignore_index=True,
+    ).drop_duplicates("Player Record ID")
+    render_shortlist_quick_add(
+        shortlist_candidates,
+        source_key="Player Similarity",
+        title="Save the selected player or a similar candidate",
+    )
 
 def show_clustering_page(filtered_df):
     """Show player clustering page with clearer explanations."""
@@ -1117,6 +1136,12 @@ def show_scouting_page(filtered_df):
         "Simple meaning: Player Score ranks overall performance. Young Talent Score ranks young players based on performance, age, and playing time."
     )
 
+    render_shortlist_quick_add(
+        filtered_df,
+        source_key="Scouting",
+        title="Save a scouting candidate to the transfer shortlist",
+    )
+
     tab1, tab2, tab3 = st.tabs([
         "Player Scoring System",
         "Young Talent Detection",
@@ -1512,6 +1537,12 @@ def show_scouting_page(filtered_df):
                     "of being treated as zero."
                 )
                 st.write(ROLE_SCORE_PROFILES[selected_role])
+
+def show_transfer_shortlist_page(players_df):
+    """Show the dark-theme recruitment workspace."""
+
+    show_shared_transfer_shortlist_page(players_df, theme="dark")
+
 
 def show_league_analysis_page(filtered_df):
     """Show advanced league comparison analysis."""
